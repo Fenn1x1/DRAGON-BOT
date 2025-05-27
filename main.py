@@ -55,8 +55,21 @@ class MyClient(discord.Client):
 
                 await asyncio.sleep(60)
 
-    async def on_ready(self):
-        print(f"Logged in as {self.user}")
+    @client.event
+async def on_ready():
+    print(f"✅ Logged in as {client.user}")
+    
+    # Проверка канала
+    channel = client.get_channel(CHANNEL_ID)
+    if channel is None:
+        print("❌ Канал не найден! Проверь, что CHANNEL_ID указан правильно и бот находится на сервере.")
+    else:
+        try:
+            await channel.send("✅ Бот успешно запущен и пишет в канал.")
+            print("✅ Сообщение успешно отправлено.")
+        except Exception as e:
+            print(f"❌ Ошибка при отправке сообщения: {e}")
+
 
 client = MyClient(intents=intents)
 client.run(TOKEN)

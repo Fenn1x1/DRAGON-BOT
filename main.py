@@ -8,7 +8,11 @@ CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
 TWITCH_USERS = os.getenv("TWITCH_USERS", "").split(",")
 KICK_USERS = os.getenv("KICK_USERS", "").split(",")
 
+# Включаем необходимые разрешения (intents)
 intents = discord.Intents.default()
+intents.guilds = True
+intents.messages = True
+intents.message_content = True  # Важно для отправки сообщений
 
 class MyClient(discord.Client):
     def __init__(self, **kwargs):
@@ -33,9 +37,12 @@ class MyClient(discord.Client):
     async def check_streams(self):
         await self.wait_until_ready()
         channel = self.get_channel(CHANNEL_ID)
+        if channel is None:
+            print("❌ Канал не найден! Проверь CHANNEL_ID и наличие прав у бота.")
+            return
+
         async with aiohttp.ClientSession() as session:
             while not self.is_closed():
-                # Kick
                 for user in KICK_USERS:
                     key = f"kick:{user}"
                     if await self.check_kick(session, user) and key not in self.already_live:
@@ -44,7 +51,6 @@ class MyClient(discord.Client):
                     elif not await self.check_kick(session, user) and key in self.already_live:
                         self.already_live.remove(key)
 
-                # Twitch
                 for user in TWITCH_USERS:
                     key = f"twitch:{user}"
                     if await self.check_twitch(session, user) and key not in self.already_live:
@@ -55,21 +61,17 @@ class MyClient(discord.Client):
 
                 await asyncio.sleep(60)
 
-    @client.event
-async def on_ready():
-    print(f"✅ Logged in as {client.user}")
-    
-    # Проверка канала
-    channel = client.get_channel(CHANNEL_ID)
-    if channel is None:
-        print("❌ Канал не найден! Проверь, что CHANNEL_ID указан правильно и бот находится на сервере.")
-    else:
-        try:
-            await channel.send("✅ Бот успешно запущен и пишет в канал.")
-            print("✅ Сообщение успешно отправлено.")
-        except Exception as e:
-            print(f"❌ Ошибка при отправке сообщения: {e}")
-
+    async def on_ready(self):
+        print(f"✅ Logged in as {self.user}")
+        channel = self.get_channel(CHANNEL_ID)
+        if channel is None:
+            print("❌ Канал не найден. Проверь ID и права.")
+        else:
+            try:
+                await channel.send("✅ Бот запущен и готов к работе!")
+                print("✅ Сообщение успешно отправлено.")
+            except Exception as e:
+                print(f"❌ Ошибка при отправке сообщения: {e}")
 
 client = MyClient(intents=intents)
 client.run(TOKEN)
